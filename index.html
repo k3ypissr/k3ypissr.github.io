@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>k3ypissr</title>
+<meta name="description" content="k3ypissr — quiet tools, built patiently. Home of kbmk, real-time on-screen translation for Windows.">
+<meta name="theme-color" content="#07060a">
+<meta property="og:type" content="website">
+<meta property="og:title" content="k3ypissr">
+<meta property="og:description" content="quiet tools, built patiently.">
+<meta property="og:image" content="assets/hero.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307060a'/%3E%3Ctext x='29' y='43' font-family='monospace' font-size='34' font-weight='700' fill='%23e9e6f0' text-anchor='middle'%3Ek%3C/text%3E%3Ccircle cx='47' cy='46' r='4' fill='%23a9855a'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --base:#07060a;
+    --ink:#0e0c13;
+    --text:#e9e6f0;
+    --mist:#8b86a8;
+    --mist2:#a49dc0;
+    --bronze:#a9855a;
+    --line:rgba(139,134,168,.16);
+    --ease:cubic-bezier(.22,.61,.21,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--base);
+    color:var(--text);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:16px;
+    line-height:1.7;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--bronze);color:var(--base)}
+  a{color:inherit}
+  a:focus-visible{
+    outline:1px solid var(--bronze);
+    outline-offset:4px;
+  }
+
+  /* film grain — CSS only, barely there */
+  body::after{
+    content:"";position:fixed;inset:-60px;z-index:70;pointer-events:none;
+    opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.9'/%3E%3C/svg%3E");
+  }
+  @media (prefers-reduced-motion: no-preference){
+    body::after{animation:grain 9s steps(6) infinite}
+    @keyframes grain{
+      0%,100%{transform:translate(0,0)} 20%{transform:translate(-18px,10px)}
+      40%{transform:translate(12px,-14px)} 60%{transform:translate(-10px,-8px)}
+      80%{transform:translate(16px,12px)}
+    }
+  }
+
+  /* faint cold glow that follows the cursor (never on touch) */
+  #glow{
+    position:fixed;left:0;top:0;width:520px;height:520px;z-index:65;
+    pointer-events:none;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(139,134,168,.075),transparent 70%);
+    transform:translate(-50%,-50%);
+  }
+  @media (hover:none),(prefers-reduced-motion: reduce){ #glow{display:none} }
+
+  /* ---------- full-window backdrop ---------- */
+  .bg{position:fixed;inset:0;z-index:0;background:var(--base)}
+  .bg-img{
+    position:absolute;inset:0;
+    background:url("assets/hero.jpg") 62% 38%/cover no-repeat;
+  }
+  .bg-shade{
+    position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(7,6,10,.62) 0%,rgba(7,6,10,.55) 45%,rgba(7,6,10,.88) 100%);
+  }
+  .bg-light{
+    position:absolute;inset:-25%;pointer-events:none;
+    background:radial-gradient(560px 420px at 30% 36%,rgba(139,134,168,.12),transparent 65%);
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .bg-img{animation:fadein 2.6s ease both}
+    .bg-light{animation:drift 26s ease-in-out infinite alternate}
+    @keyframes fadein{from{opacity:0}to{opacity:1}}
+    @keyframes drift{
+      from{transform:translate3d(-2.5%,-1%,0);opacity:.65}
+      to{transform:translate3d(2.5%,1.5%,0);opacity:1}
+    }
+  }
+
+  /* ---------- one window, three bands ---------- */
+  .page{
+    position:relative;z-index:2;
+    min-height:100svh;
+    display:flex;flex-direction:column;
+  }
+
+  /* the glass bar: logo left, github right, one connected piece */
+  header{
+    margin:1.1rem clamp(1rem,3.5vw,2.6rem) 0;
+    padding:.6rem 1.15rem;
+    display:flex;justify-content:space-between;align-items:center;
+    background:rgba(14,12,19,.44);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    backdrop-filter:blur(16px) saturate(150%);
+    border:1px solid rgba(233,230,240,.09);
+    border-radius:20px;
+    box-shadow:0 14px 34px rgba(0,0,0,.35), inset 0 1px 0 rgba(233,230,240,.06);
+  }
+  .brand{display:inline-flex;line-height:0;text-decoration:none}
+  .brand svg{height:38px;width:auto;display:block}
+  .gh{display:inline-flex;align-items:center;text-decoration:none;line-height:0}
+  .gh svg{
+    width:28px;height:28px;fill:var(--mist);
+    transition:fill .5s var(--ease);
+  }
+  .gh:hover svg{fill:var(--text)}
+
+  main{
+    flex:1;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    text-align:center;padding:2rem 1.5rem;
+  }
+  h1{
+    font-size:clamp(3rem,11.5vw,8.2rem);
+    font-weight:700;line-height:1.05;
+    letter-spacing:.27em;text-indent:.27em; /* recentre tracked text */
+    text-transform:lowercase;
+  }
+  h1 .b{color:var(--bronze)}
+  .rule{
+    width:54px;height:1px;background:var(--bronze);
+    margin:2.1rem auto 1.7rem;opacity:.85;
+  }
+  .tagline{
+    font-family:ui-monospace,"Fira Code","Cascadia Mono",Menlo,Consolas,"Courier New",monospace;
+    letter-spacing:.14em;line-height:2.15;
+  }
+  .tagline span{display:block}
+  .tagline .l1{color:var(--mist2);font-size:clamp(.8rem,2.2vw,.98rem)}
+  .tagline .l2{color:var(--mist);font-size:clamp(.7rem,2vw,.86rem);opacity:.85}
+
+  footer{
+    border-top:1px solid var(--line);
+    padding:1.4rem clamp(1.25rem,4vw,3rem);
+    display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+    color:var(--mist);font-size:.82rem;letter-spacing:.22em;text-transform:lowercase;
+  }
+
+  @media (max-width:600px){
+    .bg-img{background-position:68% 32%}
+    .brand svg{height:32px}
+    header{border-radius:16px}
+  }
+</style>
+</head>
+<body>
+<div id="glow" aria-hidden="true"></div>
+
+<div class="bg" aria-hidden="true">
+  <div class="bg-img"></div>
+  <div class="bg-shade"></div>
+  <div class="bg-light"></div>
+</div>
+
+<div class="page">
+  <header>
+    <a class="brand" href="/" aria-label="k3ypissr — home" title="k3ypissr">
+      <svg viewBox="0 0 72 48" role="img" aria-label="k3ypissr logo — a cat on a keyboard" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="34.5" width="64" height="9.5" rx="2.5" fill="none" stroke="#8b86a8" stroke-width="2"/>
+        <g fill="#8b86a8">
+          <circle cx="12" cy="39.5" r="1.15"/><circle cx="21" cy="39.5" r="1.15"/>
+          <circle cx="30" cy="39.5" r="1.15"/><circle cx="57" cy="39.5" r="1.15"/>
+        </g>
+        <g fill="#e9e6f0">
+          <path d="M14.5 32 C12 31.5 10.6 30.2 9.8 28.2 C9 26.2 6.3 25.8 5.5 27.8 C4.5 30.5 7 33.5 13 34 Z"/>
+          <path d="M12 34 C8 27 10 18.5 16.5 15.5 C22 13 28.5 15 30.5 20.5 C32.2 25 31.5 30 30 34 Z"/>
+          <circle cx="30" cy="13.5" r="6"/>
+          <path d="M25.2 10.6 L24.2 3.4 L29.6 7.2 Z"/>
+          <path d="M31.2 7.6 L37.5 3.2 L35.8 10.2 Z"/>
+          <ellipse cx="31" cy="33.2" rx="3.4" ry="1.7"/>
+        </g>
+        <path d="M21 33 C25 39.5 32 41 39 39.8" fill="none" stroke="#a9855a" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="41.7" cy="39.4" r="1.4" fill="#a9855a"/>
+      </svg>
+    </a>
+    <a class="gh" href="https://github.com/k3ypissr" target="_blank" rel="noopener" aria-label="k3ypissr on GitHub" title="github.com/k3ypissr">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 1.695.765 1.14 0 1.605 0 1.305-.495 2.85-.495 2.85 0 3.165 0 3.165 0 .315.135.69.825.57C20.565 21.795 24 17.3 24 12c0-6.627-5.373-12-12-12"/></svg>
+    </a>
+  </header>
+
+  <main>
+    <h1>k<span class="b">3</span>ypissr</h1>
+    <div class="rule" aria-hidden="true"></div>
+    <p class="tagline">
+      <span class="l1">BR0K3N K3YB04RD DOESN'T WORK.</span>
+      <span class="l2">SO, PISS ON K3Y TO STROKE SMOOTHER</span>
+    </p>
+  </main>
+
+  <footer>
+    <span>© k3ypissr <span id="year">2026</span></span>
+    <span>still waters, sharp keys</span>
+  </footer>
+</div>
+
+<script>
+/* ---------- footer year ---------- */
+document.getElementById("year").textContent = new Date().getFullYear();
+
+/* ---------- faint glow follows the cursor (fine pointers only) ---------- */
+(function glow(){
+  const el = document.getElementById("glow");
+  if (!el) return;
+  if (window.matchMedia("(hover: none)").matches) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  let tx = innerWidth / 2, ty = innerHeight / 3, x = tx, y = ty, live = false;
+  addEventListener("pointermove", function(e){
+    tx = e.clientX; ty = e.clientY;
+    if (!live){ live = true; requestAnimationFrame(tick); }
+  }, { passive: true });
+  function tick(){
+    x += (tx - x) * 0.06; y += (ty - y) * 0.06;
+    el.style.transform = "translate(" + (x - 260) + "px," + (y - 260) + "px)";
+    if (Math.abs(tx - x) > 0.4 || Math.abs(ty - y) > 0.4) requestAnimationFrame(tick);
+    else live = false;
+  }
+})();
+</script>
+</body>
+</html>
