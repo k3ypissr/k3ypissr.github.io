@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fatal Circuit: Street Crown — 16-Bit Rollback Fighting Game</title>
+<meta name="description" content="Fatal Circuit: Street Crown — a 16-bit Neo-Geo urban street tournament 1v1 fighting game. 6-button combat, deterministic rollback netcode, WebRTC/LAN lobbies, 8 fighters. Play on Vercel.">
+<meta name="theme-color" content="#0B0E14">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Fatal Circuit: Street Crown">
+<meta property="og:description" content="16-bit Neo-Geo 1v1 fighting game — 6-button combat, deterministic rollback netcode, WebRTC/LAN lobbies, 8 fighters.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E14; --panel:#12161f; --panel2:#171c28; --line:rgba(245,158,11,.22);
+    --text:#f1f5f9; --mist:#94a3b8; --amber:#F59E0B; --red:#EF4444; --cyan:#38BDF8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.65;overflow-x:hidden}
+  ::selection{background:var(--amber);color:#0B0E14}
+  a{color:inherit}
+  .wrap{max-width:1020px;margin:0 auto;padding:0 1.25rem}
+  /* scanlines, light touch */
+  body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;
+    background:repeating-linear-gradient(0deg,transparent 0 2px,#000 2px 3px)}
+  header{position:sticky;top:0;z-index:50;background:rgba(11,14,20,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(148,163,184,.14)}
+  header .wrap{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.25rem}
+  .brand{font-family:"Big Shoulders Display",sans-serif;font-weight:900;font-size:1.35rem;letter-spacing:.08em;text-decoration:none;text-transform:uppercase}
+  .brand b{color:var(--amber)}
+  nav a{font-family:"JetBrains Mono",monospace;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mist);text-decoration:none;margin-left:1.4rem}
+  nav a:hover{color:var(--text)}
+  .hero{text-align:center;padding:4.5rem 1.25rem 3.5rem;
+    background:radial-gradient(700px 340px at 50% 0%,rgba(245,158,11,.16),transparent 70%),radial-gradient(500px 300px at 85% 20%,rgba(239,68,68,.12),transparent 70%)}
+  .kicker{font-family:"JetBrains Mono",monospace;font-size:.78rem;letter-spacing:.3em;text-transform:uppercase;color:var(--amber)}
+  h1{font-family:"Big Shoulders Display",sans-serif;font-weight:900;text-transform:uppercase;line-height:.95;
+    font-size:clamp(3.2rem,10vw,6.5rem);margin:1rem 0 .6rem;letter-spacing:.02em}
+  h1 span{color:var(--amber)}
+  h1 .red{color:var(--red)}
+  .tag{color:var(--mist);font-size:clamp(1rem,2.4vw,1.2rem);max-width:640px;margin:0 auto 2rem}
+  .cta{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-block;padding:.9rem 1.7rem;border-radius:10px;text-decoration:none;font-weight:700;font-size:1rem}
+  .btn-play{background:var(--amber);color:#0B0E14;box-shadow:0 8px 30px rgba(245,158,11,.35)}
+  .btn-play:hover{background:#fbbf24}
+  .btn-ghost{border:1px solid rgba(148,163,184,.35);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--amber);color:var(--amber)}
+  .note{font-family:"JetBrains Mono",monospace;font-size:.78rem;color:var(--mist);margin-top:1.1rem}
+  .stats{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:2.2rem}
+  .stat{background:var(--panel);border:1px solid rgba(148,163,184,.14);border-radius:12px;padding:.7rem 1.3rem;text-align:center}
+  .stat b{display:block;font-family:"Big Shoulders Display",sans-serif;font-size:1.7rem;line-height:1;color:var(--amber)}
+  .stat span{font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mist)}
+  section{padding:3rem 0}
+  h2{font-family:"Big Shoulders Display",sans-serif;font-weight:800;text-transform:uppercase;font-size:2rem;letter-spacing:.04em;margin-bottom:.4rem}
+  h2::before{content:"▸ ";color:var(--amber)}
+  .sub{color:var(--mist);margin-bottom:1.6rem;max-width:640px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+  .card{background:var(--panel);border:1px solid rgba(148,163,184,.14);border-radius:14px;padding:1.2rem}
+  .card:hover{border-color:var(--line)}
+  .card h3{font-family:"Big Shoulders Display",sans-serif;font-size:1.35rem;text-transform:uppercase;letter-spacing:.03em}
+  .card .title{color:var(--amber);font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
+  .card p{color:var(--mist);font-size:.92rem;margin-top:.35rem}
+  .lock{color:var(--red);font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.1em}
+  .modes .card h3{color:var(--text)}
+  .modes .card p{margin-top:.3rem}
+  .badge{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+    border:1px solid var(--line);color:var(--amber);border-radius:999px;padding:.2rem .6rem;margin-bottom:.6rem}
+  table{width:100%;border-collapse:collapse;font-size:.95rem}
+  th,td{text-align:left;padding:.7rem .8rem;border-bottom:1px solid rgba(148,163,184,.14)}
+  th{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mist)}
+  td code, .keys code{font-family:"JetBrains Mono",monospace;background:var(--panel2);border:1px solid rgba(148,163,184,.2);border-radius:6px;padding:.1rem .45rem;font-size:.85rem}
+  .keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+  .panel{background:var(--panel);border:1px solid rgba(148,163,184,.14);border-radius:14px;padding:1.4rem}
+  .panel h3{font-family:"Big Shoulders Display",sans-serif;text-transform:uppercase;font-size:1.3rem;margin-bottom:.8rem}
+  .panel p{color:var(--mist);font-size:.93rem;margin-bottom:.5rem}
+  footer{border-top:1px solid rgba(148,163,184,.14);padding:2rem 0 2.5rem;color:var(--mist);font-size:.85rem}
+  footer .wrap{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  footer a{color:var(--text);text-decoration:none}
+  footer a:hover{color:var(--amber)}
+  @media (max-width:640px){ nav a{margin-left:.9rem} }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="/">Fatal <b>Circuit</b></a>
+    <nav>
+      <a href="#roster">Roster</a>
+      <a href="#modes">Modes</a>
+      <a href="#controls">Controls</a>
+      <a href="https://github.com/k3ypissr/Fatal-Circuit">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <p class="kicker">16-Bit Rollback Fighting Game</p>
+    <h1>Fatal <span>Circuit</span><br><span class="red">Street</span> Crown</h1>
+    <p class="tag">A Neo-Geo urban street tournament. 6-button arcade combat, deterministic rollback netcode, instant WebRTC / LAN lobbies — and a crown worth fighting for.</p>
+    <div class="cta">
+      <a class="btn btn-play" href="https://fatal-circuit.vercel.app/">▶ Play now — fatal-circuit.vercel.app</a>
+      <a class="btn btn-ghost" href="https://github.com/k3ypissr/Fatal-Circuit">View source on GitHub</a>
+    </div>
+    <p class="note">This page is the landing page. The full game — with live lobbies and matchmaking — runs on Vercel, which hosts its server. Static GitHub Pages can't run that part.</p>
+    <div class="stats">
+      <div class="stat"><b>8</b><span>Fighters</span></div>
+      <div class="stat"><b>6</b><span>Modes</span></div>
+      <div class="stat"><b>4</b><span>Stages</span></div>
+      <div class="stat"><b>9</b><span>Combo Trials</span></div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <section id="roster">
+    <h2>Roster</h2>
+    <p class="sub">Six fighters open from the start. Two more are earned — no shortcuts.</p>
+    <div class="grid">
+      <div class="card"><p class="title">Crimson Stray Wolf</p><h3>Kaze Hayate</h3><p>All-Rounder Brawler</p></div>
+      <div class="card"><p class="title">Iron Knuckle King</p><h3>Mason Briggs</h3><p>Rushdown Street Boxer</p></div>
+      <div class="card"><p class="title">Neon Phantom Blade</p><h3>Rin Takahashi</h3><p>High-Mobility Kunoichi</p></div>
+      <div class="card"><p class="title">Pier 19 Colossus</p><h3>Titan Vargas</h3><p>Heavy Power Grappler</p></div>
+      <div class="card"><p class="title">Emerald Cyber-Ronin</p><h3>Ryoma Kuroda</h3><p>Iaido Blade Duelist</p></div>
+      <div class="card"><p class="title">Inferno Capoeira Queen</p><h3>Elena “Blaze” Santos</h3><p>Acrobatic Flame Striker</p></div>
+      <div class="card"><p class="title">Golden Thunder Master</p><h3>Viper Chen</h3><p>Technical Rekka Striker</p><p class="lock">🔒 Clear Arcade, or win 3 Online / Versus matches</p></div>
+      <div class="card"><p class="title">Apex Underground Boss</p><h3>Crow</h3><p>Dark Tournament Boss</p><p class="lock">🔒 5-win Survival streak, or complete 3 Combo Trials</p></div>
+    </div>
+  </section>
+
+  <section id="modes" class="modes">
+    <h2>Modes</h2>
+    <p class="sub">Solo ladders, couch versus, practice — and real opponents online.</p>
+    <div class="grid">
+      <div class="card"><span class="badge">Solo</span><h3>Arcade</h3><p>4-stage ladder vs AI — Ryoma, Blaze, Titan, then Crow. Best of 3, 99s rounds.</p></div>
+      <div class="card"><span class="badge">Solo</span><h3>Survival</h3><p>One life, endless challengers. Difficulty rises with your streak. Best of 3, 60s rounds.</p></div>
+      <div class="card"><span class="badge">Local 2P</span><h3>Versus</h3><p>Two players, one keyboard — or two gamepads. Best of 3, 99s rounds.</p></div>
+      <div class="card"><span class="badge">Practice</span><h3>Training</h3><p>Free practice against a dummy. Learn the timing before you bet on it.</p></div>
+      <div class="card"><span class="badge">Practice</span><h3>Combo Trials</h3><p>9 step-by-step combo challenges across the roster.</p></div>
+      <div class="card"><span class="badge">Online</span><h3>Online</h3><p>1v1 over WebRTC with rollback netcode. Room codes, invite links, lobby chat, regional rooms.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stages</h2>
+    <p class="sub">Four painted arenas, each with its own weather and mood.</p>
+    <table>
+      <tr><th>Stage</th><th>Scene</th><th>Feel</th></tr>
+      <tr><td>District 04 Back-Alley</td><td>Midnight Arcade Strip</td><td>Rain, neon</td></tr>
+      <tr><td>Westline Metro Deck</td><td>Golden Hour Platform</td><td>Dusk trains</td></tr>
+      <tr><td>Pier 19 Freight Yard</td><td>Industrial Waterfront</td><td>Water shimmer</td></tr>
+      <tr><td>Apex Helipad Crown</td><td>Tournament Summit</td><td>Rooftop wind</td></tr>
+    </table>
+  </section>
+
+  <section id="controls">
+    <h2>Controls</h2>
+    <p class="sub">Fully remappable in-game — keyboard and gamepad, per player. Defaults for Player 1:</p>
+    <div class="keys">
+      <div class="panel">
+        <h3>Player 1 — Keyboard</h3>
+        <p>Move — <code>W</code> <code>A</code> <code>S</code> <code>D</code></p>
+        <p>Punches — <code>U</code> <code>I</code> <code>O</code> (Light / Medium / Heavy)</p>
+        <p>Kicks — <code>J</code> <code>K</code> <code>L</code> (Light / Medium / Heavy)</p>
+        <p>Throw — <code>Space</code> · Dash — <code>Shift</code> · Super — <code>P</code></p>
+      </div>
+      <div class="panel">
+        <h3>Player 2 — Keyboard</h3>
+        <p>Move — arrow keys</p>
+        <p>Punches — <code>Numpad 4</code> <code>5</code> <code>6</code></p>
+        <p>Kicks — <code>Numpad 1</code> <code>2</code> <code>3</code></p>
+        <p>Throw — <code>Numpad 0</code> · Dash — <code>Numpad Enter</code> · Super — <code>Numpad +</code></p>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:1rem">Every fighter also has motion specials — quarter-circle forward, dragon-punch, quarter-circle back — plus a super. Check the in-game move list for your fighter.</p>
+  </section>
+
+  <section>
+    <h2>Online play</h2>
+    <p class="sub">Create a room, share the code or invite link, fight. Direct WebRTC P2P when it connects, WebSocket relay when it doesn't — with live ping and connection quality shown in the lobby.</p>
+    <div class="grid">
+      <div class="card"><h3>Rollback netcode</h3><p>Deterministic simulation with rollback on prediction misses, so matches stay responsive on rough connections.</p></div>
+      <div class="card"><h3>Rooms &amp; invites</h3><p>Short room codes, <code>?join=CODE</code> links, direct <code>?p2p=</code> invites, and QR codes in the lobby.</p></div>
+      <div class="card"><h3>Regions</h3><p>North America, Europe, Asia, South America, Oceania — auto-detected, changeable in the lobby.</p></div>
+      <div class="card"><h3>Lobby chat</h3><p>Persistent global lobby chat, synced with the server. Player names are sanitised.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Run it yourself</h2>
+    <div class="panel">
+      <p><code>npm install</code> &nbsp;·&nbsp; <code>npm run dev</code> — game + lobby server on port 3000</p>
+      <p><code>npm run build</code> — production build &nbsp;·&nbsp; <code>npm run lint</code> — type-check</p>
+      <p>Stack: React 19 · TypeScript · Vite 8 · Tailwind CSS 4 · Express + WebSocket lobby server · Vercel hosting.</p>
+      <p>Full setup, environment variables, and project structure are in the <a href="https://github.com/k3ypissr/Fatal-Circuit#readme">README</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© <a href="https://k3ypissr.github.io/">k3ypissr</a> — Fatal Circuit: Street Crown</span>
+    <span>Insert coin. Pick a fighter. Take the crown.</span>
+  </div>
+</footer>
+</body>
+</html>
