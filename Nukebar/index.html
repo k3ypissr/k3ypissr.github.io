@@ -33,6 +33,13 @@
   a:focus-visible{outline:1px solid var(--bronze);outline-offset:4px}
   .wrap{max-width:1120px;margin:0 auto;padding:0 clamp(1.1rem,4vw,2.4rem)}
 
+  /* full-page interactive background: fixed canvas + cursor glow, behind everything */
+  #bg-numbers{position:fixed;inset:0;z-index:0;width:100%;height:100%;pointer-events:none}
+  #cursor-glow{position:fixed;z-index:0;width:340px;height:340px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(closest-side,rgba(169,133,90,.18),transparent 70%);
+    transform:translate(-50%,-50%);left:50%;top:40%}
+  main, footer{position:relative;z-index:1}
+
   /* floating glass nav — light version */
   header{position:fixed;top:0;left:0;right:0;z-index:50;padding:1rem clamp(1rem,3.5vw,2.6rem) 0}
   .nav{max-width:1120px;margin:0 auto;padding:.65rem 1.2rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;
@@ -55,15 +62,11 @@
     .nav .gh-link{padding:.45rem .8rem}
   }
 
-  /* hero — gradient shows through, glyph canvas on top */
-  .hero{position:relative;min-height:100svh;display:flex;align-items:center;padding:8.5rem 0 5rem;overflow:hidden}
+  /* hero — gradient shows through, numbers drift behind it */
+  .hero{position:relative;z-index:1;min-height:100svh;display:flex;align-items:center;padding:8.5rem 0 5rem;overflow:hidden}
   .hero-bg{position:absolute;inset:0;z-index:0;
     background:radial-gradient(640px 420px at 78% 22%,rgba(255,255,255,.55),transparent 65%),
       radial-gradient(560px 420px at 12% 78%,rgba(255,255,255,.35),transparent 65%)}
-  #glyphs{position:absolute;inset:0;z-index:1;width:100%;height:100%;pointer-events:none}
-  #cursor-glow{position:absolute;z-index:1;width:340px;height:340px;border-radius:50%;pointer-events:none;
-    background:radial-gradient(closest-side,rgba(169,133,90,.20),transparent 70%);
-    transform:translate(-50%,-50%);left:50%;top:40%}
   .hero .wrap{position:relative;z-index:2;width:100%}
   .kicker{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;letter-spacing:.32em;text-transform:uppercase;color:var(--bronze);
     display:flex;align-items:center;gap:.8rem}
@@ -87,7 +90,7 @@
   .hero-stats div b{display:block;font-size:2rem;line-height:1;color:var(--bronze)}
   .hero-stats div span{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mist)}
 
-  /* sections — transparent so the shifting gradient shows through */
+  /* sections — transparent so the shifting gradient + numbers show through */
   section{padding:clamp(4rem,9vw,6.5rem) 0;position:relative}
   .eyebrow{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.74rem;letter-spacing:.3em;text-transform:uppercase;color:var(--bronze)}
   h2{font-weight:900;text-transform:uppercase;font-size:clamp(2.4rem,5.5vw,3.6rem);line-height:1;margin:.7rem 0 1rem;letter-spacing:.01em}
@@ -161,6 +164,8 @@
 </style>
 </head>
 <body>
+<canvas id="bg-numbers" aria-hidden="true"></canvas>
+<div id="cursor-glow" aria-hidden="true"></div>
 <header>
   <div class="nav">
     <span class="brand">K3ypissr <b>NukeBar</b></span>
@@ -176,8 +181,6 @@
 
 <div class="hero">
   <div class="hero-bg" aria-hidden="true"></div>
-  <canvas id="glyphs" aria-hidden="true"></canvas>
-  <div id="cursor-glow" aria-hidden="true"></div>
   <div class="wrap">
     <p class="kicker">HackBar rebuilt for current browsers</p>
     <h1>K3ypissr<br><span class="b">Nuke</span><span class="r">Bar</span></h1>
@@ -187,7 +190,7 @@
       <a class="btn btn-ghost" href="https://github.com/k3ypissr/nukebar-firefox">Firefox Source</a>
       <a class="btn btn-ghost" href="https://github.com/k3ypissr/nukebar-chrome">Chrome Source</a>
     </div>
-    <p class="hero-note">Free · GPL-2.0-or-later · No account. No telemetry. · Move your mouse — the code glyphs scatter. Click for a burst.</p>
+    <p class="hero-note">Free · GPL-2.0-or-later · No account. No telemetry. · Move your mouse anywhere on the page — the binary &amp; hex numbers scatter. Click for a burst.</p>
     <div class="hero-stats">
       <div><b>3,652</b><span>Payloads</span></div>
       <div><b>177</b><span>Menus</span></div>
@@ -341,91 +344,97 @@
   requestAnimationFrame(frame);
 })();
 
-/* ---- unique particles: floating code glyphs, not dots ----
-   < > { } [ ] / ; $ # 0 1 = * — they drift, spin, scatter away from
-   the pointer, grow near it, and burst where you click. */
+/* ---- full-page interactive background: 1–4 digit binary / hex numbers ----
+   Fixed canvas covering the whole viewport, so the numbers drift behind
+   every section, not just the hero. They scatter away from the pointer,
+   grow near it, and burst where you click — anywhere on the page. */
 (function(){
-  var canvas = document.getElementById('glyphs');
+  var canvas = document.getElementById('bg-numbers');
   var glow = document.getElementById('cursor-glow');
   if (!canvas) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   if (window.matchMedia('(hover: none)').matches) return;
   var ctx = canvas.getContext('2d');
-  var hero = canvas.parentElement;
   var W = 0, H = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
   var mouse = { x: -9999, y: -9999 };
-  var CHARS = ['<','>','{','}','[',']','/',';','$','#','0','1','=','*'];
+  var HEX = '0123456789ABCDEF';
   var COLORS = ['rgba(138,109,63,', 'rgba(220,38,38,', 'rgba(91,100,114,'];
-  var glyphs = [], bursts = [];
+  var nums = [], bursts = [];
+  function randNum(){
+    var len = 1 + Math.floor(Math.random() * 4); /* 1–4 digits */
+    if (Math.random() < .5) {
+      /* binary: 0s and 1s */
+      var b = '';
+      for (var i = 0; i < len; i++) b += Math.random() < .5 ? '0' : '1';
+      return b;
+    }
+    /* hex: 0–9 A–F, sometimes with a 0x prefix */
+    var h = '';
+    for (var j = 0; j < len; j++) h += HEX[Math.floor(Math.random() * 16)];
+    return (Math.random() < .35 ? '0x' : '') + h;
+  }
   function size(){
-    var r = hero.getBoundingClientRect();
-    W = r.width; H = r.height;
+    W = window.innerWidth; H = window.innerHeight;
     canvas.width = W * dpr; canvas.height = H * dpr;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   function make(x, y, burst){
     return {
-      ch: CHARS[Math.floor(Math.random() * CHARS.length)],
+      txt: randNum(),
       x: x !== undefined ? x : Math.random() * W,
       y: y !== undefined ? y : Math.random() * H,
-      vx: (Math.random() - .5) * (burst ? 3.2 : .3),
-      vy: (Math.random() - .5) * (burst ? 3.2 : .3),
-      size: 11 + Math.random() * 13,
-      rot: Math.random() * Math.PI * 2,
-      spin: (Math.random() - .5) * .02,
+      vx: (Math.random() - .5) * (burst ? 3.4 : .3),
+      vy: (Math.random() - .5) * (burst ? 3.4 : .3),
+      size: 11 + Math.random() * 11,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      alpha: .35 + Math.random() * .4,
+      alpha: .30 + Math.random() * .35,
       life: burst ? 1 : Infinity
     };
   }
   function seed(){
-    glyphs = [];
-    var n = Math.min(48, Math.floor(W * H / 26000));
-    for (var i = 0; i < n; i++) glyphs.push(make());
+    nums = [];
+    var n = Math.min(64, Math.floor(W * H / 24000));
+    for (var i = 0; i < n; i++) nums.push(make());
   }
   function tick(){
     ctx.clearRect(0, 0, W, H);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    var all = glyphs.concat(bursts);
+    var all = nums.concat(bursts);
     for (var i = 0; i < all.length; i++) {
       var g = all[i];
       var dx = g.x - mouse.x, dy = g.y - mouse.y;
       var d2 = dx * dx + dy * dy;
       var near = 1;
-      if (d2 < 16900) {
-        var d = Math.sqrt(d2) || 1, f = (130 - d) / 130 * .9;
+      if (d2 < 19600) {
+        var d = Math.sqrt(d2) || 1, f = (140 - d) / 140 * .9;
         g.vx += (dx / d) * f; g.vy += (dy / d) * f;
-        near = 1 + (1 - d / 130) * .7; /* grow near the pointer */
-        g.rot += g.spin * 3;
+        near = 1 + (1 - d / 140) * .8; /* grow near the pointer */
       }
       g.vx *= .97; g.vy *= .97;
-      g.x += g.vx; g.y += g.vy; g.rot += g.spin;
-      if (g.x < -20) g.x = W + 20; if (g.x > W + 20) g.x = -20;
-      if (g.y < -20) g.y = H + 20; if (g.y > H + 20) g.y = -20;
-      if (g.life !== Infinity) g.life -= .012;
-      ctx.save();
-      ctx.translate(g.x, g.y); ctx.rotate(g.rot);
+      g.x += g.vx; g.y += g.vy;
+      if (g.x < -30) g.x = W + 30; if (g.x > W + 30) g.x = -30;
+      if (g.y < -30) g.y = H + 30; if (g.y > H + 30) g.y = -30;
+      if (g.life !== Infinity) {
+        g.life -= .012;
+        if (Math.random() < .02) g.txt = randNum(); /* burst numbers flicker */
+      }
       ctx.font = '700 ' + Math.round(g.size * near) + 'px ui-monospace, Menlo, Consolas, monospace';
       ctx.fillStyle = g.color + Math.max(0, Math.min(1, g.alpha * (g.life === Infinity ? 1 : g.life))) + ')';
-      ctx.fillText(g.ch, 0, 0);
-      ctx.restore();
+      ctx.fillText(g.txt, g.x, g.y);
     }
     bursts = bursts.filter(function(g){ return g.life > 0; });
     requestAnimationFrame(tick);
   }
   size(); seed(); tick();
   window.addEventListener('resize', function(){ size(); seed(); });
-  hero.addEventListener('pointermove', function(e){
-    var r = hero.getBoundingClientRect();
-    mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
+  window.addEventListener('pointermove', function(e){
+    mouse.x = e.clientX; mouse.y = e.clientY;
     if (glow) { glow.style.left = mouse.x + 'px'; glow.style.top = mouse.y + 'px'; }
   }, { passive: true });
-  hero.addEventListener('pointerleave', function(){ mouse.x = -9999; mouse.y = -9999; });
-  hero.addEventListener('click', function(e){
-    var r = hero.getBoundingClientRect();
-    var cx = e.clientX - r.left, cy = e.clientY - r.top;
-    for (var i = 0; i < 14; i++) bursts.push(make(cx, cy, true));
+  window.addEventListener('pointerleave', function(){ mouse.x = -9999; mouse.y = -9999; });
+  window.addEventListener('click', function(e){
+    for (var i = 0; i < 14; i++) bursts.push(make(e.clientX, e.clientY, true));
   });
 })();
 </script>
